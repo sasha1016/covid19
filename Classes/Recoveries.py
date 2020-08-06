@@ -12,7 +12,7 @@ from Column import Columns
 import Logger
 
 pd.options.display.max_rows = 200
-file_name = '11-07-2020'
+file_name = '30-06-2020'
 
 class Recoveries():
 
@@ -61,7 +61,16 @@ class Recoveries():
 
 
     def __extract_total_from_district__(self):
-        district = self.columns.get()
+        district,total = self.columns.get('DISTRICT'), self.columns.get('TOT')
+
+        if district is not None and total is None: 
+            regex = self.columns.COLUMNS['DISTRICT']['REGEX']
+            df = self.__raw_df__[district].str.strip().str.extract(regex)
+            districts, totals = df[0], df[1]
+            #totals = totals.astype(str).str.strip(['(',')'])
+            #print(totals,'\n',districts)
+            self.__raw_df__[district] = districts 
+            self.__raw_df__['total'] = totals 
 
             
     def __split_snos_and_districts__(self):
@@ -69,22 +78,28 @@ class Recoveries():
         modded_snos = self.__raw_df__[snos].str.strip().str.extract(self.columns.COLUMNS['SNO']['REGEX']).replace(['nan',np.nan],'')
         modded_district = self.__raw_df__[district].str.strip().str.extract(self.columns.COLUMNS['SNO']['REGEX']).replace(['nan',np.nan],'')
         new_df = modded_snos.add(modded_district,fill_value = '')
-        #print(new_df,modded_district,modded_snos)
         self.__raw_df__[snos].iloc[1:] = (new_df[0]) 
-        self.__raw_df__[district].iloc[1:] = (new_df[1])
+        if len(new_df.columns.to_list()) == 2: 
+            self.__raw_df__[snos].iloc[1:] = (new_df[0])
+            self.__raw_df__[district].iloc[1:] = (new_df[1])
+        else:
+            self.__raw_df__[snos].iloc[1:] = (new_df[0])
+        #self.__raw_df__[district].iloc[1:] = (new_df[1])
 
     def __process__(self):
         Document.drop_unimportant_values(self)
         #Document.clean_values(self)
         self.columns.determine(self.__raw_df__)
+        print(self.columns.get())
+        #print(self.__raw_df__)
         self.__fix_pnos_positional_errors__()
         Document.drop_unimportant_values(self)
         Document.clean_values(self)
         self.__drop_total_row__()
         self.__raw_df__ = self.rows.join(self.__raw_df__)
-        #print(self.columns.get())
-        #Document.reset_columns(self)  
         self.__split_snos_and_districts__()      
+        #Document.reset_columns(self) 
+        self.__extract_total_from_district__() 
 
     def get(self):
         return self.__raw_df__ 
@@ -94,7 +109,7 @@ class Recoveries():
         self.__raw_df__ = self.document.get_tables('RECOVERY')
 
         self.columns = Columns(columns=['PNOS','SNO','DISTRICT','TOT'])
-        self.columns.set_frequencies(unit=['SNO','PNOS'] ,multiple=['TOT'])
+        self.columns.set_frequencies(unit=['SNO','PNOS','DISTRICT'] ,multiple=['TOT'])
         self.rows = Rows() 
 
         self.__process__() 
