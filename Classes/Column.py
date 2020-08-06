@@ -13,7 +13,7 @@ DISTRICTS_TOLERANCE_LIMIT = 7
 SEXES = {'male','female','f','m'}
 
 COL_SEX = {'REGEX':r'^(Male|Female|f|m)$','VALUES':SEXES}
-COL_SNO = {'REGEX':r'^(\d{1,5})?\s*(.*)?$','values':None}
+COL_SNO = {'REGEX':r'^(\d{1,5})?\s*([A-Za-z\s]*)$','values':None}
 COL_TOT = {'REGEX':r'^\d{1,5}$','values':None}
 COL_PNO = {'REGEX':r'^([Pp]\s*[-]?\s*)?(\d{4,10})$','values':None}
 COL_AGE = {'REGEX':r'^\d{1,2}$','values':None}
@@ -25,7 +25,21 @@ COL_ISOAT = {'REGEX':r'^((?:died|designated|private|brought).*(?=[-,]))(.*)','va
 COL_SOURCE = {'REGEX':r'(?:Contact|Inter|Returnee|ili|sari|Under|Asymptomatic).*','values':None}
 COL_CMRBDTS = {'REGEX':r'(?:dm|htn|-|ihd|ckd)','values':None}
 COL_SYMPTMS = {'REGEX':r'(breathlessness|fever|cough|cold)','values':None}
-COL_DISTRICT = {'REGEX':r'^(?:.*)\s*?\((\d*)\)$','VALUES':DISTRICTS}
+COL_DISTRICT = {'REGEX':r'^([A-Za-z\s]+)\s*(?:\((\d*)\))?$','VALUES':DISTRICTS}
+
+
+def sno_test(values):
+    numbers = [re.match('\d+',value).group(0) for value in values if re.match('\d+',value) is not None]
+    print(numbers)
+    numbers = sorted([int(number) for number in numbers])
+    print(numbers)
+    differences = np.diff(numbers,1).tolist()
+    print(differences) 
+    if differences.count(1) >= (len(differences) - 2):
+        return True 
+    else:
+        return False
+
 
 class Columns():
 
@@ -53,6 +67,7 @@ class Columns():
 
         return True if column_almost_subset and has_common_values_with_districts else False 
 
+    
     def determine(self,df):
         if self.__UNIT_FREQUENCY__ is None:
             raise('Columns cannot be determined without setting single and multiple frequency columns')
@@ -84,11 +99,17 @@ class Columns():
                         matches = [True if column_regex.match(value) is not None else False for value in values]
                         #print(f'pitting {column} against {column_name} and column is distinct {distinct_valued_column}',matches)
                         if(matches.count(True) >= .75 * len(values) and not (column == 'dod' and column_name == 'DOA')): # 75% of the column matches it 
-                            #print(f'Matched {column} with {column_name}')
                             if column_name == 'PNOS' and len(values) < 5:
                                 break
+                            if column_name == 'SNO': 
+                                if not sno_test(values):
+                                    column_name = 'TOT'
+                            if column_name == 'TOT':
+                                if sno_test(values):
+                                    column_name = 'SNO'
                             self.columns[column_name] = column 
                             column_matched = True
+                            #print(f'Matched {column} with {column_name}')
                             break
                         else:
                             multiple_frequencies_traversed = (j == len(self.__MULTIPLE_FREQUENCY__) - 1)
