@@ -15,7 +15,6 @@ import Logger
 pd.options.display.max_rows = 200
 file_name = '08-07-2020'
 Logger.init(f'/data/logs/{file_name}')
-rows.Logger = Logger 
 
 class Recoveries():
 

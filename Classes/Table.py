@@ -18,7 +18,9 @@ def drop_unimportant_values(df):
 def clean_values(df,text_columns):
     name='Clean Dataframe values'
     df.replace(regex=[r'\n',r'P\s*-\s*',r'&'],value=['','',','],inplace=True)
-    df = df.apply(lambda x: x.astype(str).str.lower().str.strip())
+    #df = df.apply(lambda x: x.astype(str).str.lower().str.strip())
+    for column in text_columns:
+        df[column] = df[column].astype(str).apply(lambda x: x.lower().strip())
     return (name,None,None)
 
 def reset_columns(df):
