@@ -24,12 +24,6 @@ def row_mostly_null(row):
 
 
 class NewCases(): 
-    __raw_df__ = None 
-    COLUMNS = {'DESCRIPTION':None}
-    __reset_index_count__ = 0 
-    __cols__ = {'SNO':None,'PNO':None,'DPNO':None,'ISOAT':None,'SOURCE':None,'SEX':None,'DISTRICT':None,'AGE':None}
-    __DISTRICTS__ = {'dakshina kannada','belagavi','hassana','hassan','shivamogga','bagalakote', 'ballari','bellary','belagavi','gadag','vijayapura','chamarajanagara','kodagu','mysuru','mandya','chikkamagaluru','bidar','bengaluru urban','bengaluru rural','udupi','uttara kannada','dharwada','dharwad','yadgir','yadagiri','koppala','kalaburagi','raichuru','raichur','davanagere','bengaluru rural','chitradurga','ramanagara','ramnagar','chikkaballapura','kolara','kolar','tumkur','tumakuru'}
-    __SEXES__ = {'male','female','f','m'}
 
     @Logger.log(name='WRAPPER',wrapper=True,df=True)
     def __wrapper__(self,func,*args,**kwargs):
