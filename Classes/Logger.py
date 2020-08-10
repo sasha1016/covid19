@@ -70,20 +70,36 @@ def log(name,**kwargs):
     if info_log is None or error_log is None:
         raise('Please set the filename of the log file')
     success_message = kwargs.get('message',f'{name} completed successfully')
+    wrapper = kwargs.get('wrapper',False)
     log_df = kwargs.get('df',False)
 
     def container(func):
         @functools.wraps(func)
         def wrapper(self,*args,**kwargs):
-            global error_log, info_log
+            global error_log, info_log, df_log
+            nonlocal success_message, name, wrapper
             try:
                 # Logging df prior to function execution
                 if log_df is True:
-                    df_log.info(f'Raw DF before {name} process\n{self.__raw_df__.to_string()}\n')
+                    df_log.info(f'Raw DF before {name} process\n{self.__raw_df__.to_string()}')
                 # Executing wrapped function 
-                func(*args,**kwargs)
+                f = func(self,*args,**kwargs)
+
+                wrapper_fname, message, data = f 
+
+                if f is not None:
+                    success_message += f' and {wrapper_fname}'
+                    if message is not None:
+                        success_message += f' returned a message of {message}'
+                    if data is not None:
+                        if message is None:
+                            success_message += f' returned data {data}'
+                        success_message += f' with data {data}'
                 # Logging success message
-                info_log.info()
+                
+                info_log.info(success_message)
+                if log_df is True:
+                    df_log.info(f'Raw DF after {name} process\n{self.__raw_df__.to_string()}')
             except Exception:
                 message = f"Error in process {name}\n"
                 error_log.exception(message)
