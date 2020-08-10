@@ -90,6 +90,7 @@ class Document:
         self.__hdf5_path__ = create_abs_path(f'/data/h5/{filename}.h5')
 
     def __init__(self,path,filename):
+        self.filename = filename
         self.__path__ = path
         self.__mk_hdf5_path__(filename)
         self.pdf = pypdf.PdfFileReader(path)
