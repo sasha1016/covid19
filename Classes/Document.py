@@ -63,7 +63,10 @@ class Document:
         self.__raw_df__ = self.__raw_df__.apply(lambda x: x.astype(str).str.lower().str.strip())
 
     def reset_columns(self):
-        columns = list(self.__raw_df__.iloc[0])
+        actual_columns = self.__raw_df__.columns 
+        columns_to_be = list(self.__raw_df__.iloc[0])
+        columns = list(zip(actual_columns,columns_to_be))
+        columns = [x if isinstance(x,str) else y for x,y in columns]
         columns = [re.sub(r'\s{1,}',' ',name) for name in columns]
         self.__raw_df__ = self.__raw_df__.iloc[1:]
         self.__raw_df__.columns = columns
@@ -87,7 +90,6 @@ class Document:
         self.__hdf5_path__ = create_abs_path(f'/data/h5/{filename}.h5')
 
     def __init__(self,path,filename):
-        print(path)
         self.__path__ = path
         self.__mk_hdf5_path__(filename)
         self.pdf = pypdf.PdfFileReader(path)
