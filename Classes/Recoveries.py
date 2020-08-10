@@ -7,17 +7,26 @@ import numpy as np
 from datetime import datetime
 
 from Document import Document
-from Row import Rows
+import Row as rows
+import Table as table
 from Column import Columns 
 import Logger
 
 pd.options.display.max_rows = 200
-file_name = '30-06-2020'
+file_name = '08-07-2020'
+Logger.init(f'/data/logs/{file_name}')
+rows.Logger = Logger 
 
 class Recoveries():
 
     __raw_df__ = None 
 
+    @Logger.log(name='WRAPPER',wrapper=True,df=True)
+    def __wrapper__(self,func,*args,**kwargs):
+        logger_message = func(*args,**kwargs)
+        return logger_message
+
+    @Logger.log(name='Fix Patient Numbers Above Table Head',df=True)
     def __fix_pnos_positional_errors__(self):
 
         thead_row, pnos_placement_errors = (None,None)
@@ -56,10 +65,11 @@ class Recoveries():
         pnos_placement_errors = determine_errors(self,thead_row) 
         fix(self,pnos_placement_errors,thead_row)
 
+    @Logger.log(name='Drop Total Row')
     def __drop_total_row__(self):
         self.__raw_df__ = self.__raw_df__.iloc[0:-1]
 
-
+    @Logger.log(name='Extract Total From District',df=True)
     def __extract_total_from_district__(self):
         district,total = self.columns.get('DISTRICT'), self.columns.get('TOT')
 
@@ -67,39 +77,44 @@ class Recoveries():
             regex = self.columns.COLUMNS['DISTRICT']['REGEX']
             df = self.__raw_df__[district].str.strip().str.extract(regex)
             districts, totals = df[0], df[1]
-            #totals = totals.astype(str).str.strip(['(',')'])
-            #print(totals,'\n',districts)
             self.__raw_df__[district] = districts 
             self.__raw_df__['total'] = totals 
 
-            
+    @Logger.log(name='Splitting Serial Numbers and Districts',df=True)        
     def __split_snos_and_districts__(self):
         snos,district = self.columns.get('SNO'), self.columns.get('DISTRICT')
         modded_snos = self.__raw_df__[snos].str.strip().str.extract(self.columns.COLUMNS['SNO']['REGEX']).replace(['nan',np.nan],'')
         modded_district = self.__raw_df__[district].str.strip().str.extract(self.columns.COLUMNS['SNO']['REGEX']).replace(['nan',np.nan],'')
         new_df = modded_snos.add(modded_district,fill_value = '')
-        self.__raw_df__[snos].iloc[1:] = (new_df[0]) 
-        if len(new_df.columns.to_list()) == 2: 
+        modded_districts_is_empty = modded_district.iloc[1:].replace('',np.nan).dropna(how='all').empty
+        if not modded_districts_is_empty: 
             self.__raw_df__[snos].iloc[1:] = (new_df[0])
             self.__raw_df__[district].iloc[1:] = (new_df[1])
         else:
             self.__raw_df__[snos].iloc[1:] = (new_df[0])
-        #self.__raw_df__[district].iloc[1:] = (new_df[1])
+
+    @Logger.log(name='Create column to check if Patient Numbers count and total count match')
+    def __create_check_column__(self):
+        pnos,total = self.columns.get('PNOS'), self.columns.get('TOT')
+        total = total if total is not None else 'total'
+        patientnos = self.__raw_df__[pnos].replace(regex=True,to_replace=[r'[.&]', r',\s*',r'\s+'],value=['',' ',' ']).str.rstrip()
+        #print(patientnos[3],total,'\n\n',self.__raw_df__)
+        self.__raw_df__['total pnos'] = patientnos.astype(str).str.split(' ').agg([len]).astype(float)
+        totals = pd.to_numeric(self.__raw_df__[total],errors='coerce')
+        self.__raw_df__['check'] = np.where(self.__raw_df__['total pnos'] == totals,1,0)
 
     def __process__(self):
-        Document.drop_unimportant_values(self)
-        #Document.clean_values(self)
+        self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
         self.columns.determine(self.__raw_df__)
-        print(self.columns.get())
-        #print(self.__raw_df__)
         self.__fix_pnos_positional_errors__()
-        Document.drop_unimportant_values(self)
-        Document.clean_values(self)
+        self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
+        self.__wrapper__(table.clean_values,self.__raw_df__,[self.columns.get('DISTRICT')])
         self.__drop_total_row__()
-        self.__raw_df__ = self.rows.join(self.__raw_df__)
+        self.__wrapper__(rows.join,self.__raw_df__)
         self.__split_snos_and_districts__()      
-        #Document.reset_columns(self) 
         self.__extract_total_from_district__() 
+        self.__create_check_column__()
+        self.__wrapper__(table.reset_columns,self.__raw_df__) 
 
     def get(self):
         return self.__raw_df__ 
@@ -110,7 +125,7 @@ class Recoveries():
 
         self.columns = Columns(columns=['PNOS','SNO','DISTRICT','TOT'])
         self.columns.set_frequencies(unit=['SNO','PNOS','DISTRICT'] ,multiple=['TOT'])
-        self.rows = Rows() 
+        #self.rows = Rows() 
 
         self.__process__() 
 
