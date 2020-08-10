@@ -30,11 +30,8 @@ COL_DISTRICT = {'REGEX':r'^([A-Za-z\s]+)\s*(?:\((\d*)\))?$','VALUES':DISTRICTS}
 
 def sno_test(values):
     numbers = [re.match('\d+',value).group(0) for value in values if re.match('\d+',value) is not None]
-    print(numbers)
     numbers = sorted([int(number) for number in numbers])
-    print(numbers)
     differences = np.diff(numbers,1).tolist()
-    print(differences) 
     if differences.count(1) >= (len(differences) - 2):
         return True 
     else:
