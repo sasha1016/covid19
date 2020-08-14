@@ -5,6 +5,8 @@ import re
 import pandas as pd
 import numpy as np
 
+import Logger
+
 # Make this a utlis function 
 
 def create_abs_path(rel_path): 
@@ -30,12 +32,15 @@ class Document:
                                 for position,value in enumerate(spans)]
         return True
     
-    def get_tables(self,table_name):
+    def get_tables(self,table_name,force=False):
         combined_df = None
         try:
+            if force:
+                raise(KeyError)
             self.__raw_df__ = self.__get_df_from_hdf5__(table_name)
             combined_df = self.__raw_df__ 
         except (KeyError, FileNotFoundError):
+            Logger.message(f'Got DF from PDF')
             lower,upper = self.__table_spans__[self.TABLES[table_name.upper()]]
             for page_number in range(lower,upper + 1): 
                 table = camelot.read_pdf(self.__path__,pages=str(page_number))
@@ -45,7 +50,6 @@ class Document:
                     combined_df = pd.concat([combined_df,table[0].df],ignore_index=True)
             self.__raw_df__ = combined_df
             self.__save_df_to_hdf5__(table_name.upper())
-        
         return combined_df
 
     def drop_unimportant_values(self):
@@ -75,10 +79,11 @@ class Document:
             return False
 
     def __save_df_to_hdf5__(self,table):
+        Logger.message(f'Saved DF to hdf5')
         self.__raw_df__.to_hdf(self.__hdf5_path__,key = table)
-        return True
 
     def __get_df_from_hdf5__(self,table):
+        Logger.message(f'Got DF from hdf5')
         return pd.read_hdf(self.__hdf5_path__,key=table) 
 
     def __mk_hdf5_path__(self,filename):

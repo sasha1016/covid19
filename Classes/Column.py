@@ -1,5 +1,7 @@
 import re
 import numpy as np
+import Logger
+
 
 DISTRICTS = {\
     'dakshina kannada','belagavi','hassana','hassan','shivamogga','bagalakote',\
@@ -22,7 +24,7 @@ COL_DOD = {'REGEX':r'(?:brought|died\s*\w+)?((?:\d{1,2})\s*[-/.]\s*(?:\w{2,3}|\d
 COL_DPNO = {'REGEX':r'^([\w]{2,4}\s*[-]?\s*)?(\d+)$','values':None}
 COL_PNOS = {'REGEX':r'(?:(?:[Pp]\s*[-]?\s*)?(\d{1,10}),?)','values':None}
 COL_ISOAT = {'REGEX':r'^((?:died|designated|private|brought|home).*)?(?:[-,.])(.*)$','values':None}
-COL_SOURCE = {'REGEX':r'(?:Contact|Inter|Returnee|ili|sari|Under|Asymptomatic).*','values':None}
+COL_SOURCE = {'REGEX':r'(?:contact|inter|returnee|ili|sari|under|asymptomatic).*','values':None}
 COL_CMRBDTS = {'REGEX':r'(?:dm|htn|-|ihd|ckd)','values':None}
 COL_SYMPTMS = {'REGEX':r'(breathlessness|fever|cough|cold)','values':None}
 COL_DISTRICT = {'REGEX':r'^([A-Za-z\s]+)\s*(?:\((\d*)\))?$','VALUES':DISTRICTS}
@@ -71,7 +73,7 @@ class Columns():
         df[age].replace(years,r'\1',regex=True,inplace=True)
         df[age].replace(months, '0',regex=True, inplace=True)
 
-    
+    @Logger.log(name='Determine Columns')
     def determine(self,df):
 
         if self.__UNIT_FREQUENCY__ is None:
@@ -124,7 +126,7 @@ class Columns():
                     while not column_matched:
                         column_name,column_regex = self.__MULTIPLE_FREQUENCY__[j] if not distinct_valued_column else self.__UNIT_FREQUENCY__[i]
                         matches = [True if column_regex.match(value) is not None else False for value in values]
-                        print(f'Trying to match {column_name} with {column} and matches were {matches}')
+                        #print(f'Trying to match {column_name} with {column} and matches were {matches}')
                         if(matches.count(True) >= .65 * len(values) and not (column == 'dod' and column_name == 'DOA')): # 75% of the column matches it 
                             #print(f'Matched {column_name} with {column}')
                             if column_name == 'PNOS' and len(values) < 5:
@@ -149,10 +151,9 @@ class Columns():
                             inc = increment_column()
                             if inc is False:
                                 break 
+        return self.columns
 
-
-
-    
+    @Logger.log(name='Format Values')
     def format_values(self,column,df,custom_regex = False,regex=r'a^'):
         regex = regex if custom_regex is True else self.COLUMNS[column]['REGEX']
         if column == 'DOA':

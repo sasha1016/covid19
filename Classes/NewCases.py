@@ -3,7 +3,7 @@ import re
 import pandas as pd
 import numpy as np
 import Logger 
-from timeit import default_timer as timer 
+import time
 
 from Document import Document
 import Row as rows
@@ -61,22 +61,19 @@ class NewCases():
         self.__raw_df__.replace(to_replace,regex=True,inplace=True)        
         self.__raw_df__ = self.__raw_df__.apply(lambda x: x.astype(str).str.lower().str.strip())
     
-    def __process__(self):
-        start = timer() 
-        self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
-        self.__wrapper__(table.reset_columns,self.__raw_df__) 
+    def __process__(self): 
+        table.drop_unimportant_values(self)
+        table.reset_columns(self) 
         self.__clean_values__()
         self.columns.determine(self.__raw_df__)
-        print(self.columns.get())
         self.__clean_values__(True)
-        self.__wrapper__(rows.join,self.__raw_df__)
+        rows.join(self)
         self.__split_description__()
         self.__split_isolation_location__()
         self.__add_positive_result_date__()
         self.__remove_redundant_cols__()
         self.__format_sex__()
         self.columns.format_age(self.__raw_df__)
-        print(f'\nTook {start - timer()}\'s to parse New cases')
 
     def get(self):
         return self.__raw_df__
@@ -84,18 +81,18 @@ class NewCases():
     def __init__(self,doc):
         self.date = doc.filename
 
-        start = timer() 
+        Logger.init(f'/data/logs/newcases/{self.date}')
+
+        start = time.perf_counter() 
         self.__raw_df__ = doc.get_tables('NEW')
-        print(f'\nTook {start - timer()}\'s to load deaths')
+        Logger.message(f'Took {time.perf_counter() - start}s to load New Cases')
 
         self.columns = Columns(['PNO','SNO','DPNO','ISOAT','SOURCE','SEX','DISTRICT','AGE'])
         self.columns.set_frequencies(unit=['SNO','PNO','DPNO'],multiple=['SOURCE','ISOAT','AGE'])
 
-        Logger.init(f'/data/logs/newcases/{self.date}')
-
-        print('Started Parsing New Cases')
-
+        start = time.perf_counter()
         self.__process__()
+        Logger.message(f'Took {time.perf_counter() - start}s to process New Cases')
     
 def create_abs_path(rel_path): 
     path_to_data = os.getcwd() + os.sep + os.pardir
@@ -103,7 +100,7 @@ def create_abs_path(rel_path):
 
 def main():
     file_name = '03-07-2020'
-    Logger.init(f'/data/logs/{file_name}')
+    Logger.init(f'/data/logs/newcases/{file_name}')
     pdf_path = create_abs_path(f'/data/06-07/{file_name}.pdf')
     doc = Document(pdf_path,file_name)
     newcases = NewCases(doc)

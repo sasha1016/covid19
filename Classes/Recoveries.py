@@ -3,7 +3,7 @@ import re
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from timeit import default_timer as timer 
+import time
 import Logger
 
 from Document import Document
@@ -18,11 +18,6 @@ class Recoveries():
 
     __raw_df__ = None 
 
-    @Logger.log(name='WRAPPER',wrapper=True,df=True)
-    def __wrapper__(self,func,*args,**kwargs):
-        logger_message = func(*args,**kwargs)
-        return logger_message
-
     @Logger.log(name='Fix Patient Numbers Above Table Head',df=True)
     def __fix_pnos_positional_errors__(self):
 
@@ -30,7 +25,7 @@ class Recoveries():
 
         def determine_thead(self):
             patient_numbers_coords = [(x, self.__raw_df__.columns[y])\
-                for x, y in zip(*np.where(self.__raw_df__.values == 'Patient Number'))]
+                for x, y in zip(*np.where(self.__raw_df__.values == 'patient number'))]
             #print(patient_numbers_coords)
             thead_row = patient_numbers_coords[0][0]
             return thead_row
@@ -107,37 +102,35 @@ class Recoveries():
         self.__raw_df__ = self.__raw_df__.apply(lambda x: x.astype(str).str.lower().str.strip())
 
     def __process__(self):
-        start = timer() 
-        self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
+        table.drop_unimportant_values(self)
         self.__clean_values__()
         self.columns.determine(self.__raw_df__)
-        print(self.columns.get())
         self.__fix_pnos_positional_errors__()
-        self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
+        table.drop_unimportant_values(self)
         self.__drop_total_row__()
-        self.__wrapper__(rows.join,self.__raw_df__)
+        rows.join(self)
         self.__split_snos_and_districts__()      
         self.__extract_total_from_district__() 
         self.__create_check_column__()
-        self.__wrapper__(table.reset_columns,self.__raw_df__) 
-        print(f'\nTook {start - timer()}\'s to parse Recoveries')
+        table.reset_columns(self) 
 
     def get(self):
         return self.__raw_df__ 
 
     def __init__(self,doc):
-        start = timer() 
+
+        Logger.init(f'/data/logs/recoveries/{doc.filename}')
+
+        start = time.perf_counter()
         self.__raw_df__ = doc.get_tables('RECOVERY')
-        print(f'\nTook {start - timer()}\'s to load recoveries')
+        Logger.message(f'Took {time.perf_counter() - start}s to load Recoveries')
 
         self.columns = Columns(columns=['PNOS','SNO','DISTRICT','TOT'])
         self.columns.set_frequencies(unit=['SNO','PNOS','DISTRICT'] ,multiple=['TOT'])
 
-        Logger.init(f'/data/logs/recoveries/{doc.filename}')
-
-        print('Started Parsing Recoveries')
-
+        start = time.perf_counter()
         self.__process__() 
+        Logger.message(f'Took {time.perf_counter() - start}s to process Recoveries')
 
 def create_abs_path(rel_path): 
     path_to_data = os.getcwd() + os.sep + os.pardir
@@ -145,7 +138,7 @@ def create_abs_path(rel_path):
 
 def main():
     file_name = '08-07-2020'
-    Logger.init(f'/data/logs/{file_name}')
+    Logger.init(f'/data/logs/recoveries/{file_name}')
     pdf_path = f'/data/06-07/{file_name}.pdf'
     pdf_path = create_abs_path(pdf_path)
     doc = Document(pdf_path,file_name)
