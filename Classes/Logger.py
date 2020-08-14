@@ -44,7 +44,7 @@ def create_log(log_type,path):
     if log_type == 'DF' or log_type == 'INFO':
         logger = logging.getLogger('LogInfo')
         logger.setLevel(logging.INFO)
-        log_path = f'{path}.df.log' if log_type == 'DF' else f'{path}.info.log'
+        log_path = f'{path}.df.info.log' if log_type == 'DF' else f'{path}.info.log'
     else:
         logger = logging.getLogger('LogError')
         logger.setLevel(logging.ERROR)
@@ -67,8 +67,8 @@ def init(filename):
     df_log = create_log(log_type='DF',path=path)
 
 def log(name,**kwargs):
-    if info_log is None or error_log is None:
-        raise('Please set the filename of the log file')
+    # if info_log is None or error_log is None:
+    #     raise('Please set the filename of the log file')
     success_message = kwargs.get('message',f'{name} completed successfully')
     wrapper = kwargs.get('wrapper',False)
     log_df = kwargs.get('df',False)
@@ -85,9 +85,8 @@ def log(name,**kwargs):
                 # Executing wrapped function 
                 f = func(self,*args,**kwargs)
 
-                wrapper_fname, message, data = f 
-
                 if f is not None:
+                    wrapper_fname, message, data = f 
                     success_message += f' and {wrapper_fname}'
                     if message is not None:
                         success_message += f' returned a message of {message}'

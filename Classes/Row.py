@@ -9,31 +9,32 @@ def row_mostly_null(row):
     else:
         return False
 
-class Rows():
+# class Rows():
 
-    def join(self,df,delimiters=None):
-        disjoint_rows = [index for index,row in df.iterrows() if row_mostly_null(row)]
-        try:
-            for row in disjoint_rows:
-                df.loc[row] = df.loc[row].replace({np.nan:'','nan':''})
-                df.loc[row-1] = df.loc[row-1].apply(str) + ' ' + df.loc[row].apply(str)
-                if delimiters is not None:
-                    for column in delimiters:
-                        if df.at[row,column] != '':
-                            df.at[row-1,column] = (df.at[row-1,column] + delimiters[column] + df.at[row,column])
-                df.loc[row] = np.nan
-        except Exception as e:
-            print(e)
-        df = df.dropna(how='all',axis=0)
-        return df
+#     def join(self,df,delimiters=None):
+#         disjoint_rows = [index for index,row in df.iterrows() if row_mostly_null(row)]
+#         try:
+#             for row in disjoint_rows:
+#                 df.loc[row] = df.loc[row].replace({np.nan:'','nan':''})
+#                 df.loc[row-1] = df.loc[row-1].apply(str) + ' ' + df.loc[row].apply(str)
+#                 if delimiters is not None:
+#                     for column in delimiters:
+#                         if df.at[row,column] != '':
+#                             df.at[row-1,column] = (df.at[row-1,column] + delimiters[column] + df.at[row,column])
+#                 df.loc[row] = np.nan
+#         except Exception as e:
+#             print(e)
+#         df = df.dropna(how='all',axis=0)
+#         return df
 
-    def __init__(self):
-        print('asd')
+#     def __init__(self):
+#         print('asd')
 
 
 def join(df,delimiters=None):
     name = 'Row Join'
     disjoint_rows = [index for index,row in df.iterrows() if row_mostly_null(row)]
+    print(disjoint_rows)
     for row in disjoint_rows:
         df.loc[row] = df.loc[row].replace({np.nan:'','nan':''})
         df.loc[row-1] = df.loc[row-1].apply(str) + ' ' + df.loc[row].apply(str)

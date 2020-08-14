@@ -17,9 +17,6 @@ class Document:
     pdf = None
     TABLES = {'RECOVERY':0,'NEW':1,'DEATHS':2,'BED_STATUS':3}
     
-    DISTRICTS = {'dakshina kannada','belagavi','hassana','hassan','shivamogga','bagalakote', 'ballari','bellary','belagavi','gadag','vijayapura','chamarajanagara','kodagu','mysuru','mandya','chikkamagaluru','bidar','bengaluru urban','bengaluru rural','udupi','uttara kannada','dharwada','dharwad','yadgir','yadagiri','koppala','kalaburagi','raichuru','raichur','davanagere','bengaluru rural','chitradurga','ramanagara','ramnagar','chikkaballapura','kolara','kolar','tumkur','tumakuru'}
-    COLUMNS = {}
-    
     
     def __get_table_spans__(self):
         spans = []
@@ -78,12 +75,10 @@ class Document:
             return False
 
     def __save_df_to_hdf5__(self,table):
-        print('Saved it to hdf5')
         self.__raw_df__.to_hdf(self.__hdf5_path__,key = table)
         return True
 
     def __get_df_from_hdf5__(self,table):
-        print('Got it from hdf5')
         return pd.read_hdf(self.__hdf5_path__,key=table) 
 
     def __mk_hdf5_path__(self,filename):

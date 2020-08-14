@@ -10,7 +10,7 @@ DISTRICTS = {\
                         'ramnagar','chikkaballapura','kolara','kolar','tumkur','tumakuru'\
                             }
 DISTRICTS_TOLERANCE_LIMIT = 7 
-SEXES = {'male','female','f','m'}
+SEXES = {'Male','Female','f','m','female','male'}
 
 COL_SEX = {'REGEX':r'^(Male|Female|f|m)$','VALUES':SEXES}
 COL_SNO = {'REGEX':r'^(\d{1,5})?\s*([A-Za-z\s]*)$','values':None}
@@ -21,7 +21,7 @@ COL_DOA = {'REGEX':r'(?:brought|died\s*\w+)?((?:\d{1,2})\s*[-/.]\s*(?:\w{2,3}|\d
 COL_DOD = {'REGEX':r'(?:brought|died\s*\w+)?((?:\d{1,2})\s*[-/.]\s*(?:\w{2,3}|\d{1,2})\s*[-/.]\s*(?:\d{2,4}))','values':None}
 COL_DPNO = {'REGEX':r'^([\w]{2,4}\s*[-]?\s*)?(\d+)$','values':None}
 COL_PNOS = {'REGEX':r'(?:(?:[Pp]\s*[-]?\s*)?(\d{1,10}),?)','values':None}
-COL_ISOAT = {'REGEX':r'^((?:died|designated|private|brought).*(?=[-,]))(.*)','values':None}
+COL_ISOAT = {'REGEX':r'^((?:died|designated|private|brought|home).*)?(?:[-,.])(.*)$','values':None}
 COL_SOURCE = {'REGEX':r'(?:Contact|Inter|Returnee|ili|sari|Under|Asymptomatic).*','values':None}
 COL_CMRBDTS = {'REGEX':r'(?:dm|htn|-|ihd|ckd)','values':None}
 COL_SYMPTMS = {'REGEX':r'(breathlessness|fever|cough|cold)','values':None}
@@ -29,10 +29,11 @@ COL_DISTRICT = {'REGEX':r'^([A-Za-z\s]+)\s*(?:\((\d*)\))?$','VALUES':DISTRICTS}
 
 
 def sno_test(values):
-    numbers = [re.match('\d+',value).group(0) for value in values if re.match('\d+',value) is not None]
+    numbers = [re.match(r'\d+',value).group(0) for value in values if re.match('\d+',value) is not None]
     numbers = sorted([int(number) for number in numbers])
     differences = np.diff(numbers,1).tolist()
-    if differences.count(1) >= (len(differences) - 2):
+    if (differences.count(1) >= (len(differences) - 2)) and numbers[0] == 1:
+        print(numbers)
         return True 
     else:
         return False
@@ -64,8 +65,15 @@ class Columns():
 
         return True if column_almost_subset and has_common_values_with_districts else False 
 
+    def format_age(self,df):
+        age = self.columns.get('AGE')
+        years, months = r'^(\d+)\s*(?:([Yy].*))', r'^(\d+)\s*(?:([Mm].*))'
+        df[age].replace(years,r'\1',regex=True,inplace=True)
+        df[age].replace(months, '0',regex=True, inplace=True)
+
     
     def determine(self,df):
+
         if self.__UNIT_FREQUENCY__ is None:
             raise('Columns cannot be determined without setting single and multiple frequency columns')
         else:
@@ -75,6 +83,7 @@ class Columns():
                 values, frequencies = value_counts.index.to_list(), value_counts.to_list() 
                 slice_index = len(frequencies) if len(frequencies) < 25 else 25
                 values,frequencies = values[0:slice_index], frequencies[0:slice_index]
+                raw_values = df[column].head(slice_index)
 
                 values_set = set(values) 
 
@@ -91,39 +100,57 @@ class Columns():
                     i,j = 0, 0
                     distinct_valued_column = frequencies.count(1) == len(frequencies) 
                     column_matched = False
+
+                    def increment_column():
+                        nonlocal i,j 
+                        multiple_frequencies_traversed = (j == len(self.__MULTIPLE_FREQUENCY__) - 1)
+                        unit_frequencies_traversed = (i == len(self.__UNIT_FREQUENCY__) - 1)
+                        if multiple_frequencies_traversed and unit_frequencies_traversed:
+                            return False
+                        
+                        if distinct_valued_column:
+                            if unit_frequencies_traversed:
+                                return False
+                            i += 1 
+
+                        if not distinct_valued_column:
+                            if multiple_frequencies_traversed:
+                                return False
+                            j += 1 
+                        
+                        return True
+
+
                     while not column_matched:
                         column_name,column_regex = self.__MULTIPLE_FREQUENCY__[j] if not distinct_valued_column else self.__UNIT_FREQUENCY__[i]
                         matches = [True if column_regex.match(value) is not None else False for value in values]
-                        #print(f'pitting {column} against {column_name} and column is distinct {distinct_valued_column}',matches)
-                        if(matches.count(True) >= .75 * len(values) and not (column == 'dod' and column_name == 'DOA')): # 75% of the column matches it 
+                        print(f'Trying to match {column_name} with {column} and matches were {matches}')
+                        if(matches.count(True) >= .65 * len(values) and not (column == 'dod' and column_name == 'DOA')): # 75% of the column matches it 
+                            #print(f'Matched {column_name} with {column}')
                             if column_name == 'PNOS' and len(values) < 5:
                                 break
                             if column_name == 'SNO': 
-                                if not sno_test(values):
-                                    column_name = 'TOT'
+                                if not sno_test(raw_values):
+                                    if 'TOT' in self.columns.keys():
+                                        column_name = 'TOT' 
+                                    else: 
+                                        # The column values matched with SNO but it isn't SNO or TOT either
+                                        inc = increment_column()
+                                        #print(f'{column} is not SNO but matched with {column_name}')
+                                        continue
                             if column_name == 'TOT':
-                                if sno_test(values):
+                                if sno_test(raw_values):
                                     column_name = 'SNO'
                             self.columns[column_name] = column 
                             column_matched = True
-                            #print(f'Matched {column} with {column_name}')
+                            #print(f'Set {column_name} with {column}')
                             break
                         else:
-                            multiple_frequencies_traversed = (j == len(self.__MULTIPLE_FREQUENCY__) - 1)
-                            unit_frequencies_traversed = (i == len(self.__UNIT_FREQUENCY__) - 1)
-                            if multiple_frequencies_traversed and unit_frequencies_traversed:
+                            inc = increment_column()
+                            if inc is False:
                                 break 
-                            #print(multiple_frequencies_traversed,unit_frequencies_traversed,i,j,distinct_valued_column)
-                            if distinct_valued_column:
-                                if unit_frequencies_traversed:
-                                    break
-                                i += 1 
 
-                            if not distinct_valued_column:
-                                if multiple_frequencies_traversed:
-                                    break
-                                j += 1 
-                            #j += 1 if not distinct_valued_column else 0
+
 
     
     def format_values(self,column,df,custom_regex = False,regex=r'a^'):
@@ -141,6 +168,7 @@ class Columns():
 
 
     def __init__(self,columns):
+        self.columns = {}
         for column in columns:
             self.columns[column] = None
             

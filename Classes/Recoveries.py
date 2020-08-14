@@ -1,20 +1,18 @@
 import os 
-import camelot
-import PyPDF2 as pypdf
 import re
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from timeit import default_timer as timer 
+import Logger
 
 from Document import Document
 import Row as rows
 import Table as table
 from Column import Columns 
-import Logger
+
 
 pd.options.display.max_rows = 200
-file_name = '08-07-2020'
-Logger.init(f'/data/logs/{file_name}')
 
 class Recoveries():
 
@@ -102,29 +100,42 @@ class Recoveries():
         totals = pd.to_numeric(self.__raw_df__[total],errors='coerce')
         self.__raw_df__['check'] = np.where(self.__raw_df__['total pnos'] == totals,1,0)
 
+    @Logger.log(name='Clean Values and Strip strings')
+    def __clean_values__(self,replace_pno=False):
+        to_replace = {r'\n':'',r'&':',',r'[pP]\s*-\s*':''}
+        self.__raw_df__.replace(to_replace,regex=True,inplace=True)        
+        self.__raw_df__ = self.__raw_df__.apply(lambda x: x.astype(str).str.lower().str.strip())
+
     def __process__(self):
+        start = timer() 
         self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
+        self.__clean_values__()
         self.columns.determine(self.__raw_df__)
+        print(self.columns.get())
         self.__fix_pnos_positional_errors__()
         self.__wrapper__(table.drop_unimportant_values,self.__raw_df__)
-        self.__wrapper__(table.clean_values,self.__raw_df__,[self.columns.get('DISTRICT')])
         self.__drop_total_row__()
         self.__wrapper__(rows.join,self.__raw_df__)
         self.__split_snos_and_districts__()      
         self.__extract_total_from_district__() 
         self.__create_check_column__()
         self.__wrapper__(table.reset_columns,self.__raw_df__) 
+        print(f'\nTook {start - timer()}\'s to parse Recoveries')
 
     def get(self):
         return self.__raw_df__ 
 
-    def __init__(self,document):
-        self.document = document 
-        self.__raw_df__ = self.document.get_tables('RECOVERY')
+    def __init__(self,doc):
+        start = timer() 
+        self.__raw_df__ = doc.get_tables('RECOVERY')
+        print(f'\nTook {start - timer()}\'s to load recoveries')
 
         self.columns = Columns(columns=['PNOS','SNO','DISTRICT','TOT'])
         self.columns.set_frequencies(unit=['SNO','PNOS','DISTRICT'] ,multiple=['TOT'])
-        #self.rows = Rows() 
+
+        Logger.init(f'/data/logs/recoveries/{doc.filename}')
+
+        print('Started Parsing Recoveries')
 
         self.__process__() 
 
@@ -132,12 +143,21 @@ def create_abs_path(rel_path):
     path_to_data = os.getcwd() + os.sep + os.pardir
     return (os.path.normpath(path_to_data + rel_path))
 
-pdf_path = f'/data/06-07/{file_name}.pdf'
-pdf_path = create_abs_path(pdf_path)
-doc = Document(pdf_path,file_name)
-rec = Recoveries(doc)
-df = rec.get()
-df
+def main():
+    file_name = '08-07-2020'
+    Logger.init(f'/data/logs/{file_name}')
+    pdf_path = f'/data/06-07/{file_name}.pdf'
+    pdf_path = create_abs_path(pdf_path)
+    doc = Document(pdf_path,file_name)
+    rec = Recoveries(doc)
+    df = rec.get()
+    df
+
+if __name__ == "__main__":
+    main()
+else:
+    file_name = '08-07-2020'
+    Logger.init(f'/data/logs/recoveries/{file_name}')
 
 
 
