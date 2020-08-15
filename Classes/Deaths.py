@@ -72,7 +72,7 @@ class Deaths():
     def __process__(self):
         table.drop_unimportant_values(self)
         self.__clean_values__()
-        table.reset_columns(self) # Resetting columns assuming the table is read perfectly, which is an issue
+        table.reset_columns(self,columns_determined=False) # Resetting columns assuming the table is read perfectly, which is an issue
         self.columns.determine(self.__raw_df__)
         self.__clean_values__(True)
         self.columns.format_values(column='DOA',df = self.__raw_df__)
@@ -82,13 +82,17 @@ class Deaths():
         self.__convert_to_datetime__('DOA')
         self.__convert_to_datetime__('DOD')
         self.__add_duration__()
+        table.checks(self)
 
     def __init__(self,doc):
 
+        table.IS = 'DEATHS'
+
+        print('\n\nDeaths parsing started')
         Logger.init(f'/data/logs/deaths/{doc.filename}')
 
         start = time.perf_counter()
-        self.__raw_df__ = doc.get_tables('DEATHS',force=True)
+        self.__raw_df__ = doc.get_tables('DEATHS')
         Logger.message(f'Took {time.perf_counter() - start}s to load deaths')
 
         self.columns = Columns(['SNO','PNO','DISTRICT','AGE','SEX','SOURCE','SYMPTMS','CMRBDTS','DOA','DOD'])
@@ -97,6 +101,8 @@ class Deaths():
         start = time.perf_counter()
         self.__process__()
         Logger.message(f'Took {time.perf_counter() - start}s to process deaths')
+        Logger.drop()
+        print('Deaths parsing completed')
     
     def get(self):
         return self.__raw_df__

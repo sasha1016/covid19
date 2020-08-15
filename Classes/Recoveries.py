@@ -34,8 +34,7 @@ class Recoveries():
             max_col = list(self.__raw_df__.columns)[-1]
             min_col = self.columns.get('PNOS')
             for col in range(max_col,min_col,-1):
-                print(col)
-                self.__raw_df__[col-1] = self.__raw_df__[col-1].str.cat(self.__raw_df__[col].replace(np.nan,''), '')
+                self.__raw_df__[col-1] = self.__raw_df__[col-1].replace(to_replace=['nan',np.nan], value=['','']).str.cat(self.__raw_df__[col].replace(to_replace=['nan',np.nan], value=['','']))
                 self.__raw_df__[col] = np.nan
 
         def determine_errors(self,thead_row):
@@ -95,6 +94,19 @@ class Recoveries():
         totals = pd.to_numeric(self.__raw_df__[total],errors='coerce')
         self.__raw_df__['check'] = np.where(self.__raw_df__['total pnos'] == totals,1,0)
 
+    def __checks__(self):
+
+        def pnos_count(self):
+            all_counts_match = True 
+            for (index,check) in self.__raw_df__['check'].iteritems():
+                if check == 0:
+                    all_counts_match = False 
+                    print(f'Patient Numbers Count failed for {index} row')
+            if all_counts_match:
+                print('All Patient Numbers Count match!')
+
+        table.checks(self,pnos_count)
+
     @Logger.log(name='Clean Values and Strip strings')
     def __clean_values__(self,replace_pno=False):
         to_replace = {r'\n':'',r'&':',',r'[pP]\s*-\s*':''}
@@ -113,16 +125,20 @@ class Recoveries():
         self.__extract_total_from_district__() 
         self.__create_check_column__()
         table.reset_columns(self) 
+        self.__checks__()
+
 
     def get(self):
         return self.__raw_df__ 
 
     def __init__(self,doc):
+        table.IS = 'RECOVERIES'
+        print('Recoveries parsing started')
 
         Logger.init(f'/data/logs/recoveries/{doc.filename}')
 
         start = time.perf_counter()
-        self.__raw_df__ = doc.get_tables('RECOVERY')
+        self.__raw_df__ = doc.get_tables('RECOVERY',force=False)
         Logger.message(f'Took {time.perf_counter() - start}s to load Recoveries')
 
         self.columns = Columns(columns=['PNOS','SNO','DISTRICT','TOT'])
@@ -131,6 +147,9 @@ class Recoveries():
         start = time.perf_counter()
         self.__process__() 
         Logger.message(f'Took {time.perf_counter() - start}s to process Recoveries')
+        Logger.drop()
+        print('Recoveries parsing completed')
+
 
 def create_abs_path(rel_path): 
     path_to_data = os.getcwd() + os.sep + os.pardir

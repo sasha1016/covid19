@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
 import Logger
+from math import floor
 
 def row_mostly_null(row):
     size = row.size 
     size_wo_na = row.dropna().size
-    row_mostly_null = ((size - size_wo_na) / size) > .7
+    row_mostly_null = ((size - size_wo_na) < floor(size / 2)) 
 
     counts = row.value_counts(dropna=False)
     most_frequent_value = counts.index[0]
@@ -38,7 +39,6 @@ def row_mostly_null(row):
 @Logger.log(name='Join Rows',df=True)
 def join(self,delimiters=None):
     disjoint_rows = [index for index,row in self.__raw_df__.iterrows() if row_mostly_null(row)]
-    print(disjoint_rows)
     for row in disjoint_rows:
         self.__raw_df__.loc[row] = self.__raw_df__.loc[row].replace({np.nan:'','nan':''})
         self.__raw_df__.loc[row-1] = self.__raw_df__.loc[row-1].apply(str) + ' ' + self.__raw_df__.loc[row].apply(str)

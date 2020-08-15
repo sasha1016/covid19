@@ -23,7 +23,7 @@ class Document:
     def __get_table_spans__(self):
         spans = []
         for page_number in range(0,self.pdf.getNumPages()):
-            annexure_reg_ex = re.compile(r'\bAnnexure',re.I)
+            annexure_reg_ex = re.compile(r'Annexure',re.I)
             page = self.pdf.getPage(page_number).extractText()
             if re.search(annexure_reg_ex,page) is not None:
                 spans.append(page_number + 1)

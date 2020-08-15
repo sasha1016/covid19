@@ -9,6 +9,7 @@ error_log = None
 info_log = None 
 df_log = None
 log_all_df = None 
+file_handlers = {'INFO':None,'DEBUG':None,'ERROR':None}
 
 def create_abs_path(rel_path): 
     path_to_data = os.getcwd() + os.sep + os.pardir
@@ -21,17 +22,19 @@ def create_log(log_type,path):
         logger = logging.getLogger('LogInfo')
         logger.setLevel(logging.INFO)
         log_path = f'{path}.info.log'
-    elif log_type == 'DF':
+    elif log_type == 'DEBUG':
         logger = logging.getLogger('LogDebug')
         logger.setLevel(logging.DEBUG)
         log_path = f'{path}.debug.log'
     else:
         logger = logging.getLogger('LogError')
         logger.setLevel(logging.ERROR)
-        log_path = f'{path}.error.log'
+        log_path = f'{path}.error.log' 
 
     file_handler = logging.FileHandler(log_path,mode='w')
-
+    
+    file_handlers[log_type] = file_handler
+    
     log_format = '%(levelname)s %(asctime)s %(message)s'
     formatter = logging.Formatter(log_format) 
     file_handler.setFormatter(formatter)
@@ -44,11 +47,17 @@ def init(filename):
     path = create_abs_path(filename)
     info_log = create_log(log_type='INFO',path=path)
     error_log = create_log(log_type='ERROR',path=path)
-    df_log = create_log(log_type='DF',path=path)
+    df_log = create_log(log_type='DEBUG',path=path)
 
 def message(msg):
     global info_log
     info_log.info(msg)
+
+def drop():
+    global error_log, info_log, df_log, file_handlers
+    error_log.removeHandler(file_handlers['ERROR'])
+    info_log.removeHandler(file_handlers['INFO'])
+    df_log.removeHandler(file_handlers['DEBUG'])
 
 def log(name,**kwargs):
     # if info_log is None or error_log is None:
@@ -83,6 +92,7 @@ def log(name,**kwargs):
                     df_log.debug(f'Raw DF after {name} process\n{self.__raw_df__.to_string()}')
             except Exception:
                 message = f"Process {name}\n"
+                print(f'\nError in {message}')
                 error_log.exception(message)
                 pass
         return wrapper 

@@ -8,8 +8,8 @@ DISTRICTS = {\
         'ballari','bellary','belagavi','gadag','vijayapura','chamarajanagara','kodagu',\
             'mysuru','mandya','chikkamagaluru','bidar','bengaluru urban','bengaluru rural','udupi',\
                 'uttara kannada','dharwada','dharwad','yadgir','yadagiri','koppala','kalaburagi',\
-                    'raichuru','raichur','davanagere','bengaluru rural','chitradurga','ramanagara',\
-                        'ramnagar','chikkaballapura','kolara','kolar','tumkur','tumakuru'\
+                    'raichuru','raichur','davanagere','haveri','chitradurga','ramanagara',\
+                        'ramnagar','ramanagar','chikkaballapura','kolara','kolar','tumkur','tumakuru'\
                             }
 DISTRICTS_TOLERANCE_LIMIT = 7 
 SEXES = {'Male','Female','f','m','female','male'}
@@ -35,7 +35,6 @@ def sno_test(values):
     numbers = sorted([int(number) for number in numbers])
     differences = np.diff(numbers,1).tolist()
     if (differences.count(1) >= (len(differences) - 2)) and numbers[0] == 1:
-        print(numbers)
         return True 
     else:
         return False
@@ -166,6 +165,9 @@ class Columns():
 
     def get(self,column = None):
         return self.columns[column] if column is not None else self.columns
+
+    def set_columns(self,columns):
+        self.columns = columns
 
 
     def __init__(self,columns):

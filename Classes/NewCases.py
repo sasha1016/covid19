@@ -63,7 +63,7 @@ class NewCases():
     
     def __process__(self): 
         table.drop_unimportant_values(self)
-        table.reset_columns(self) 
+        table.reset_columns(self,columns_determined=False) 
         self.__clean_values__()
         self.columns.determine(self.__raw_df__)
         self.__clean_values__(True)
@@ -74,11 +74,14 @@ class NewCases():
         self.__remove_redundant_cols__()
         self.__format_sex__()
         self.columns.format_age(self.__raw_df__)
+        table.checks(self)
 
     def get(self):
         return self.__raw_df__
     
     def __init__(self,doc):
+        table.IS = 'NEWCASES'
+        print('\n\nNew cases parsing started')
         self.date = doc.filename
 
         Logger.init(f'/data/logs/newcases/{self.date}')
@@ -93,6 +96,8 @@ class NewCases():
         start = time.perf_counter()
         self.__process__()
         Logger.message(f'Took {time.perf_counter() - start}s to process New Cases')
+        Logger.drop()
+        print('New cases parsing completed')
     
 def create_abs_path(rel_path): 
     path_to_data = os.getcwd() + os.sep + os.pardir
