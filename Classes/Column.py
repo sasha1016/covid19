@@ -90,7 +90,7 @@ class Columns():
 
                 if(values_set.issubset(self.COLUMNS['SEX']['VALUES'])): 
                     # check if sex exists in the columns of the table 
-                    if 'SEX' in self.columns:
+                    if 'SEX' in self.columns and values_set != set():
                         self.columns['SEX'] = column 
                 else: 
                 

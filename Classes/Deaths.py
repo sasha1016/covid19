@@ -10,6 +10,7 @@ from Document import Document
 from Column import Columns 
 import Table as table 
 import Row as rows
+import constants as const
 
 import Logger
 
@@ -84,25 +85,12 @@ class Deaths():
         self.__add_duration__()
         table.checks(self)
 
+    @table.initialize(table=const.DEATHS)
     def __init__(self,doc):
-
-        table.IS = 'DEATHS'
-
-        print('\n\nDeaths parsing started')
-        Logger.init(f'/data/logs/deaths/{doc.filename}')
-
-        start = time.perf_counter()
-        self.__raw_df__ = doc.get_tables('DEATHS')
-        Logger.message(f'Took {time.perf_counter() - start}s to load deaths')
 
         self.columns = Columns(['SNO','PNO','DISTRICT','AGE','SEX','SOURCE','SYMPTMS','CMRBDTS','DOA','DOD'])
         self.columns.set_frequencies(unit=['SNO','PNO','DOA','DOD'],multiple=['AGE','SOURCE','CMRBDTS','DOA','DOD','SYMPTMS'])
 
-        start = time.perf_counter()
-        self.__process__()
-        Logger.message(f'Took {time.perf_counter() - start}s to process deaths')
-        Logger.drop()
-        print('Deaths parsing completed')
     
     def get(self):
         return self.__raw_df__
@@ -112,7 +100,7 @@ def create_abs_path(rel_path):
     return (os.path.normpath(path_to_data + rel_path))
 
 def main():
-    file_name = '05-07-2020'
+    file_name = '09-07-2020'
     Logger.init(f'/data/logs/deaths/{file_name}')
     pdf_path = create_abs_path(f'/data/06-07/{file_name}.pdf')
     doc = Document(pdf_path,file_name)

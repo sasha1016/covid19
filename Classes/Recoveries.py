@@ -137,6 +137,10 @@ class Recoveries():
 
         Logger.init(f'/data/logs/recoveries/{doc.filename}')
 
+        if not doc.exists('RECOVERIES'):
+            Logger.message(f'Recoveries table doesn\'t exist or is not readable')
+            return None 
+
         start = time.perf_counter()
         self.__raw_df__ = doc.get_tables('RECOVERY',force=False)
         Logger.message(f'Took {time.perf_counter() - start}s to load Recoveries')

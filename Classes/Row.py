@@ -4,16 +4,23 @@ import Logger
 from math import floor
 
 def row_mostly_null(row):
+    values = row.values.tolist()
     size = row.size 
-    size_wo_na = row.dropna().size
-    row_mostly_null = ((size - size_wo_na) < floor(size / 2)) 
+    size_wo_na = row.dropna().size 
+    size_wo_na -= values.count('nan') + values.count(pd.NaT)
+    row_mostly_null = ((size - size_wo_na) > floor(size / 2)) if size < 5 else ((size - size_wo_na) >= floor(size / 2))
 
-    counts = row.value_counts(dropna=False)
-    most_frequent_value = counts.index[0]
-    if ((most_frequent_value == 'nan' or pd.isna(most_frequent_value)) and counts.to_list()[0] != 1) and row_mostly_null:
-        return True
-    else:
+    if size <= 2 and size_wo_na != 0:
         return False
+
+    return row_mostly_null
+
+    # if (most_frequent_value == 'nan' or pd.isna(most_frequent_value)) and counts.to_list()[0] != 1:
+    #     if row_mostly_null:
+    #         return True
+        
+    # else:
+    #     return False
 
 # class Rows():
 
@@ -51,3 +58,22 @@ def join(self,delimiters=None):
     self.__raw_df__ = self.__raw_df__.reset_index(drop=True)
     return disjoint_rows
         
+def main():
+    series= []
+    series.append(pd.Series([np.nan,'h']))
+    series.append(pd.Series([1,2]))
+    series.append(pd.Series([np.nan,1,2]))
+    series.append(pd.Series([np.nan,1,3,54,23]))
+    series.append(pd.Series([np.nan,np.nan,np.nan,1,'23123',2]))
+    series.append(pd.Series(['nan','nan',2]))
+    series.append(pd.Series([np.nan,np.nan,np.nan,4,2,3]))
+    series.append(pd.Series(['nan','nan','nan','nan','nan',5,5,4,2,3]))
+    series.append(pd.Series([np.nan,np.nan,np.nan,np.nan,2,3]))
+
+    i = 0 
+    for s in series:
+        print(f'series {i} {row_mostly_null(s)}')
+        i += 1
+
+if __name__ == '__main__':
+    main()

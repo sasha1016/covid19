@@ -86,6 +86,10 @@ class NewCases():
 
         Logger.init(f'/data/logs/newcases/{self.date}')
 
+        if not doc.exists('NEWCASES'):
+            Logger.message(f'New Cases table doesn\'t exist or is not readable')
+            return None 
+
         start = time.perf_counter() 
         self.__raw_df__ = doc.get_tables('NEW')
         Logger.message(f'Took {time.perf_counter() - start}s to load New Cases')

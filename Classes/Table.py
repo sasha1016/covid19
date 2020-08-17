@@ -1,10 +1,12 @@
 import os 
-import camelot
-import PyPDF2 as pypdf
 import re
 import pandas as pd
 import numpy as np
 import Logger 
+import functools
+import time 
+import constants as const
+
 
 IS = None 
 COLUMN_COUNTS = {'RECOVERIES':6,'DEATHS':12,'NEWCASES':9}
@@ -87,5 +89,40 @@ def checks(self,*args):
         check(self)
     
     print('Checks completed!')
-    
+
+def initialize(table,**kwargs):
+    table_name = const.DISPLAY_NAMES[table]
+    def container(func):
+        @functools.wraps(func)
+        def wrapper(self,*args,**kwargs):
+            global IS
+            nonlocal table_name,table
+            doc = args[0]
+
+            IS = table
+            Logger.init(f'/data/logs/{IS.lower()}/{doc.filename}')
+
+            if not doc.exists(table):
+                message = f'\n{table_name} table doesn\'t exist or is not readable'
+                print(message)
+                Logger.message(message)
+                return None 
+
+            print(f'\n\n{table_name} parsing started')
+
+            start = time.perf_counter()
+            self.__raw_df__ = doc.get_tables(table,force=True)
+            Logger.message(f'Took {time.perf_counter() - start}s to load {table_name}')
+
+            func(self,*args,**kwargs)
+
+            start = time.perf_counter()
+            self.__process__()
+            Logger.message(f'Took {time.perf_counter() - start}s to process {table_name}')
+
+            Logger.drop()
+            print(f'{table_name} parsing completed')
+        
+        return wrapper
+    return container    
 

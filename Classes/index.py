@@ -14,7 +14,7 @@ def csv_path(table,file_name):
     return create_abs_path(f'/data/csv/{table}/{file_name}.csv')
 
 def main():
-    file_name = '07-07-2020'
+    file_name = '15-06-2020'
     pdf_path = f'/data/06-07/{file_name}.pdf'
     pdf_path = create_abs_path(pdf_path)
 
@@ -23,9 +23,12 @@ def main():
     newcases = NewCases(doc)
     deaths = Deaths(doc)
 
-    recoveries.get().to_csv(csv_path('recoveries',file_name))
-    newcases.get().to_csv(csv_path('newcases',file_name))
-    deaths.get().to_csv(csv_path('deaths',file_name))
+    if recoveries.get() is not None:
+        recoveries.get().to_csv(csv_path('recoveries',file_name))
+    if newcases.get() is not None:
+        newcases.get().to_csv(csv_path('newcases',file_name))
+    if deaths.get() is not None:
+        deaths.get().to_csv(csv_path('deaths',file_name))
 
 if __name__ == "__main__":
     main()
