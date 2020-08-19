@@ -1,5 +1,6 @@
 import os 
 import re
+import regex
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -10,6 +11,8 @@ from Document import Document
 import Row as rows
 import Table as table
 from Column import Columns 
+from Column import constants as col
+import constants as const
 
 
 pd.options.display.max_rows = 200
@@ -24,28 +27,45 @@ class Recoveries():
         thead_row, pnos_placement_errors = (None,None)
 
         def determine_thead(self):
+            # thead_row = None
+            # rows_to_search_in = self.__raw_df__.head(5)
+            # found = False
+            # for index,row in rows_to_search_in.iterrows():
+            #     for string in row.values:
+            #         if isinstance(string,str):
+            #             if regex.search(r'patient number{e<=3}',string,flags=re.I) is not None:
+            #                 thead_row = index
+            #                 found = True 
+            #                 break
+            #             else:
+            #                 pass
+            #                 #print(f'patient number wasn\'t found in {index} with {string}')
+            #     if found == True:
+            #         break
+            # return thead_row
             patient_numbers_coords = [(x, self.__raw_df__.columns[y])\
-                for x, y in zip(*np.where(self.__raw_df__.values == 'patient number'))]
+                for x, y in zip(*np.where(regex.findall(r'patient number{e<=3}',str(self.__raw_df__.values),re.I) != []))]
             #print(patient_numbers_coords)
             thead_row = patient_numbers_coords[0][0]
             return thead_row
         
         def shift(self):
+            global col
             max_col = list(self.__raw_df__.columns)[-1]
-            min_col = self.columns.get('PNOS')
+            min_col = self.columns.get(col.PNOS)
             for col in range(max_col,min_col,-1):
                 self.__raw_df__[col-1] = self.__raw_df__[col-1].replace(to_replace=['nan',np.nan], value=['','']).str.cat(self.__raw_df__[col].replace(to_replace=['nan',np.nan], value=['','']))
                 self.__raw_df__[col] = np.nan
 
         def determine_errors(self,thead_row):
-            pnos_col = self.columns.get('PNOS')
-            pnos_regex = re.compile(self.columns.COLUMNS['PNOS']['REGEX'],re.I)
+            pnos_col = self.columns.get(col.PNOS)
+            pnos_regex = re.compile(self.columns.COLUMNS[col.PNOS]['REGEX'],re.I)
             placement_errors = [x for x,value in self.__raw_df__[pnos_col].iteritems()\
                 if x < thead_row and isinstance(value,str) and pnos_regex.match(value) is not None]
             return placement_errors
         
         def fix(self,pnos_placement_errors,thead_row):
-            index_district_pnos_row, pnos_col = (thead_row + 1 , self.columns.get('PNOS'))
+            index_district_pnos_row, pnos_col = (thead_row + 1 , self.columns.get(col.PNOS))
             for row in pnos_placement_errors:
                 new_value = self.__raw_df__.at[row,pnos_col] + self.__raw_df__.at[index_district_pnos_row,pnos_col]
                 self.__raw_df__.at[index_district_pnos_row,pnos_col] = new_value
@@ -62,10 +82,10 @@ class Recoveries():
 
     @Logger.log(name='Extract Total From District',df=True)
     def __extract_total_from_district__(self):
-        district,total = self.columns.get('DISTRICT'), self.columns.get('TOT')
+        district,total = self.columns.get([col.DISTRICT,col.TOT])
 
         if district is not None and total is None: 
-            regex = self.columns.COLUMNS['DISTRICT']['REGEX']
+            regex = self.columns.COLUMNS[col.DISTRICT]['REGEX']
             df = self.__raw_df__[district].str.strip().str.extract(regex)
             districts, totals = df[0], df[1]
             self.__raw_df__[district] = districts 
@@ -73,9 +93,9 @@ class Recoveries():
 
     @Logger.log(name='Splitting Serial Numbers and Districts',df=True)        
     def __split_snos_and_districts__(self):
-        snos,district = self.columns.get('SNO'), self.columns.get('DISTRICT')
-        modded_snos = self.__raw_df__[snos].str.strip().str.extract(self.columns.COLUMNS['SNO']['REGEX']).replace(['nan',np.nan],'')
-        modded_district = self.__raw_df__[district].str.strip().str.extract(self.columns.COLUMNS['SNO']['REGEX']).replace(['nan',np.nan],'')
+        snos,district = self.columns.get([col.SNO,col.DISTRICT])
+        modded_snos = self.__raw_df__[snos].str.strip().str.extract(self.columns.COLUMNS[col.SNO]['REGEX']).replace(['nan',np.nan],'')
+        modded_district = self.__raw_df__[district].str.strip().str.extract(self.columns.COLUMNS[col.SNO]['REGEX']).replace(['nan',np.nan],'')
         new_df = modded_snos.add(modded_district,fill_value = '')
         modded_districts_is_empty = modded_district.iloc[1:].replace('',np.nan).dropna(how='all').empty
         if not modded_districts_is_empty: 
@@ -86,10 +106,9 @@ class Recoveries():
 
     @Logger.log(name='Create column to check if Patient Numbers count and total count match')
     def __create_check_column__(self):
-        pnos,total = self.columns.get('PNOS'), self.columns.get('TOT')
+        pnos,total = self.columns.get([col.PNOS,col.TOT])
         total = total if total is not None else 'total'
         patientnos = self.__raw_df__[pnos].replace(regex=True,to_replace=[r'[.&]', r',\s*',r'\s+'],value=['',' ',' ']).str.rstrip()
-        #print(patientnos[3],total,'\n\n',self.__raw_df__)
         self.__raw_df__['total pnos'] = patientnos.astype(str).str.split(' ').agg([len]).astype(float)
         totals = pd.to_numeric(self.__raw_df__[total],errors='coerce')
         self.__raw_df__['check'] = np.where(self.__raw_df__['total pnos'] == totals,1,0)
@@ -131,28 +150,11 @@ class Recoveries():
     def get(self):
         return self.__raw_df__ 
 
+    @table.initialize(table=const.RECOVERIES)
     def __init__(self,doc):
-        table.IS = 'RECOVERIES'
-        print('Recoveries parsing started')
 
-        Logger.init(f'/data/logs/recoveries/{doc.filename}')
-
-        if not doc.exists('RECOVERIES'):
-            Logger.message(f'Recoveries table doesn\'t exist or is not readable')
-            return None 
-
-        start = time.perf_counter()
-        self.__raw_df__ = doc.get_tables('RECOVERY',force=False)
-        Logger.message(f'Took {time.perf_counter() - start}s to load Recoveries')
-
-        self.columns = Columns(columns=['PNOS','SNO','DISTRICT','TOT'])
-        self.columns.set_frequencies(unit=['SNO','PNOS','DISTRICT'] ,multiple=['TOT'])
-
-        start = time.perf_counter()
-        self.__process__() 
-        Logger.message(f'Took {time.perf_counter() - start}s to process Recoveries')
-        Logger.drop()
-        print('Recoveries parsing completed')
+        self.columns = Columns(columns=[col.PNOS,col.SNO,col.DISTRICT,col.TOT])
+        self.columns.set_frequencies(unit=[col.SNO,col.PNOS,col.DISTRICT] ,multiple=[col.TOT])
 
 
 def create_abs_path(rel_path): 
@@ -160,7 +162,7 @@ def create_abs_path(rel_path):
     return (os.path.normpath(path_to_data + rel_path))
 
 def main():
-    file_name = '08-07-2020'
+    file_name = '15-08-2020'
     Logger.init(f'/data/logs/recoveries/{file_name}')
     pdf_path = f'/data/06-07/{file_name}.pdf'
     pdf_path = create_abs_path(pdf_path)
@@ -171,9 +173,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-else:
-    file_name = '08-07-2020'
-    Logger.init(f'/data/logs/recoveries/{file_name}')
 
 
 

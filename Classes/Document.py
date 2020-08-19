@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import numpy as np
 from regex import search
+import constants as const
 
 import Logger
 
@@ -15,16 +16,16 @@ def create_abs_path(rel_path):
 
 class Document: 
     __path__ = None
-    __table_spans__ = []
+    __table_spans__ = {const.RECOVERIES:(0,),const.NEWCASES:(0,),const.DEATHS:(0,),const.ICU:(0,)}
     pdf = None
-    TABLE_NAMES = ['RECOVERIES','NEWCASES','DEATHS','ICU']
-    TABLES = {'RECOVERY':0,'NEW':1,'DEATHS':2,'ICU':3}
-    EXISTS = {'RECOVERIES':False,'NEWCASES':False,'DEATHS':False,'ICU':False}
-    UNIQUE_COLUMNS = {'RECOVERIES':None,'NEWCASES':None,'DEATHS':None,'ICU':None}
-    UNIQUE_COLUMNS['RECOVERIES'] = ['District','Patient Number','Total']
-    UNIQUE_COLUMNS['NEWCASES'] = ['Distict','State P Code','Isolated','District P Code','Source','Description']
-    UNIQUE_COLUMNS['DEATHS'] = ['DOA','DOD','Co-Morbidities','Symptoms']
-    UNIQUE_COLUMNS['ICU'] = ['District','Total','Patient Number']
+    TABLE_NAMES = [const.RECOVERIES,const.NEWCASES,const.DEATHS,const.ICU]
+    TABLES = {const.RECOVERIES:0,const.NEWCASES:1,const.DEATHS:2,const.ICU:3}
+    EXISTS = {const.RECOVERIES:False,const.NEWCASES:False,const.DEATHS:False,const.ICU:False}
+    UNIQUE_COLUMNS = {const.RECOVERIES:None,const.NEWCASES:None,const.DEATHS:None,const.ICU:None}
+    UNIQUE_COLUMNS[const.RECOVERIES] = ['District','Patient Number','Total']
+    UNIQUE_COLUMNS[const.NEWCASES] = ['Distict','State P Code','Isolated','District P Code','Source','Description']
+    UNIQUE_COLUMNS[const.DEATHS] = ['DOA','DOD','Co-Morbidities','Symptoms']
+    UNIQUE_COLUMNS[const.ICU] = ['District','Total','Patient Number']
 
     def __find_table_present__(self,text):
         whitespace_removed = re.sub(r'[\t\n]+','',text)
@@ -56,20 +57,30 @@ class Document:
         return self.EXISTS[table] 
     
     def __get_table_spans__(self):
-        spans = []
+        spans = {}
         for page_number in range(0,self.pdf.getNumPages()):
             annexure_reg_ex = re.compile(r'\bAnnexure\b',re.I)
             page = self.pdf.getPage(page_number).extractText()
             matches = re.findall(annexure_reg_ex,page)
             if matches != []:
-                spans.append(page_number + 1)
-                multiple_tables = True if len(matches) > 1 else False
-                print(matches,page_number)
-                self.__find_table_present__(page)
-        self.__table_spans__ = [(value,value) if len(spans) - 1 == position \
-                                else (value,spans[position+1] - 1) \
-                                for position,value in enumerate(spans)]
-        print(self.EXISTS)
+                table = self.__find_table_present__(page)
+                if table is not None:
+                    spans[page_number + 1] = table
+
+        spans = list(spans.items())
+
+        for index,values in enumerate(spans):
+            page_number,table = values
+            if len(spans) - 1 == index:
+                self.__table_spans__[table] = (page_number,self.pdf.getNumPages())
+            else:
+                self.__table_spans__[table] = (page_number,(spans[index+1])[0]-1)
+
+        for table,exists in list(self.EXISTS.items()):
+            if exists:
+                print(f'{const.DISPLAY_NAMES[table]} was found from pages {self.__table_spans__[table][0]} to {self.__table_spans__[table][1]}')
+            else:
+                print(f'{const.DISPLAY_NAMES[table]} was not found.')
         return True
     
     def get_tables(self,table_name,force=False):
@@ -81,7 +92,7 @@ class Document:
             combined_df = self.__raw_df__ 
         except (KeyError, FileNotFoundError):
             Logger.message(f'Got DF from PDF')
-            lower,upper = self.__table_spans__[self.TABLES[table_name.upper()]]
+            lower,upper = self.__table_spans__[table_name.upper()]
             for page_number in range(lower,upper + 1): 
                 table = camelot.read_pdf(self.__path__,pages=str(page_number))
                 if page_number == lower: 
@@ -111,7 +122,7 @@ class Document:
         self.__get_table_spans__()
 
 def main():
-    file_name = '15-06-2020'
+    file_name = '07-07-2020'
     pdf_path = f'/data/06-07/{file_name}.pdf'
     pdf_path = create_abs_path(pdf_path)
 

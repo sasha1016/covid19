@@ -8,13 +8,12 @@ import time
 
 from Document import Document
 from Column import Columns 
+from Column import constants as col
 import Table as table 
 import Row as rows
 import constants as const
 
 import Logger
-
-pd.options.display.max_rows = 200
 
 class Deaths():
 
@@ -23,21 +22,21 @@ class Deaths():
     @Logger.log(name='Add Dead on Arrival',message="Dead on Arrival column added for all rows",df=True)
     def __add_dead_on_arrival_column__(self):
         regex = re.compile(r'^brought|died|dead.*',re.I)
-        column_name = self.columns.get('DOA')
+        column_name = self.columns.get(col.DOA)
         doa = self.__raw_df__[column_name]
         self.__raw_df__['dead on arrival'] = np.where(doa.str.contains(regex), 1 , 0)
 
     @Logger.log(name="Format DOA",message="Converted all Date of Admissions",df=True)
     def __format_doa__(self):
-        regex = self.columns.COLUMNS['DOA']['REGEX']
-        doa = self.columns.get('DOA')
+        regex = self.columns.COLUMNS[col.DOA]['REGEX']
+        doa = self.columns.get(col.DOA)
         self.__raw_df__[doa] = self.__raw_df__[doa].str.extract(regex)
         date_components_regex = re.compile(r'(?:brought|died\s*\w+)?(?:(\d{1,2})\s*[-/.]\s*(\w{2,3}|\d{1,2})\s*[-/.]\s*(\d{2,4}))$',re.I)
         self.__raw_df__[doa].replace(to_replace=date_components_regex,value=r'\1-\2-\3',inplace=True)
         self.__raw_df__[doa].replace(to_replace=np.nan,value='nan',inplace=True)
     
     def __join__(self):
-        symptoms,comobs = self.columns.get('SYMPTMS'), self.columns.get('CMRBDTS')
+        symptoms,comobs = self.columns.get([col.SYMPTMS,col.CMRBDTS])
         delimiters = {} 
         delimiters[symptoms], delimiters[comobs] = ',', ',' 
         rows.join(self,delimiters) 
@@ -50,7 +49,7 @@ class Deaths():
     @Logger.log(name="Add Duration column",message="Duration of Admission column added")
     def __add_duration__(self):
         df = self.__raw_df__
-        doa, dod = self.columns.get('DOA'), self.columns.get('DOD')
+        doa, dod = self.columns.get([col.DOA,col.DOD])
         df['duration'] = df[dod] - df[doa]
         
     @Logger.log(name="Explode List",message="Exploded all comma seperated values for column")
@@ -76,21 +75,20 @@ class Deaths():
         table.reset_columns(self,columns_determined=False) # Resetting columns assuming the table is read perfectly, which is an issue
         self.columns.determine(self.__raw_df__)
         self.__clean_values__(True)
-        self.columns.format_values(column='DOA',df = self.__raw_df__)
+        self.columns.format_values(column=col.DOA,df = self.__raw_df__)
         self.__join__()
         self.__add_dead_on_arrival_column__()
         self.__format_doa__()
-        self.__convert_to_datetime__('DOA')
-        self.__convert_to_datetime__('DOD')
+        self.__convert_to_datetime__(col.DOA)
+        self.__convert_to_datetime__(col.DOD)
         self.__add_duration__()
         table.checks(self)
 
     @table.initialize(table=const.DEATHS)
     def __init__(self,doc):
 
-        self.columns = Columns(['SNO','PNO','DISTRICT','AGE','SEX','SOURCE','SYMPTMS','CMRBDTS','DOA','DOD'])
-        self.columns.set_frequencies(unit=['SNO','PNO','DOA','DOD'],multiple=['AGE','SOURCE','CMRBDTS','DOA','DOD','SYMPTMS'])
-
+        self.columns = Columns([col.SNO,col.PNO,col.DISTRICT,col.AGE,col.SOURCE,col.SYMPTMS,col.CMRBDTS,col.DOA,col.DOD])
+        self.columns.set_frequencies(unit=[col.SNO,col.PNO,col.DOA,col.DOD],multiple=[col.AGE,col.SOURCE,col.CMRBDTS,col.DOA,col.DOD,col.SYMPTMS])
     
     def get(self):
         return self.__raw_df__

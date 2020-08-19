@@ -14,7 +14,7 @@ def csv_path(table,file_name):
     return create_abs_path(f'/data/csv/{table}/{file_name}.csv')
 
 def main():
-    file_name = '15-06-2020'
+    file_name = '15-08-2020'
     pdf_path = f'/data/06-07/{file_name}.pdf'
     pdf_path = create_abs_path(pdf_path)
 

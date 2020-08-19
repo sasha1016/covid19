@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import Logger
+import constants
 
 
 DISTRICTS = {\
@@ -164,7 +165,13 @@ class Columns():
                     df.at[index,self.columns['DOD']] = matches[1]
 
     def get(self,column = None):
-        return self.columns[column] if column is not None else self.columns
+        if isinstance(column,list):
+            to_return = []
+            for c in column:
+                to_return.append(self.columns[c])
+            return tuple(to_return)
+        else:
+            return self.columns[column] if column is not None else self.columns
 
     def set_columns(self,columns):
         self.columns = columns
@@ -174,4 +181,13 @@ class Columns():
         self.columns = {}
         for column in columns:
             self.columns[column] = None
+
+def main():
+    cols = Columns(['SNO','PNO','DISTRICT'])
+    print(cols.get(['SNO','PNO']))
+    print(cols.get())
+    print(cols.get('SNO'))
+
+if __name__ == "__main__":
+    main()
             
