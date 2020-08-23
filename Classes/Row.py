@@ -46,8 +46,11 @@ def row_mostly_null(row):
 @Logger.log(name='Join Rows',df=True)
 def join(self,delimiters=None):
     disjoint_rows = [index for index,row in self.__raw_df__.iterrows() if row_mostly_null(row)]
+    print(disjoint_rows)
+    disjoint_rows = list(reversed(disjoint_rows))
     for row in disjoint_rows:
         self.__raw_df__.loc[row] = self.__raw_df__.loc[row].replace({np.nan:'','nan':''})
+        self.__raw_df__.loc[row-1] = self.__raw_df__.loc[row-1].replace({np.nan:'','nan':''})
         self.__raw_df__.loc[row-1] = self.__raw_df__.loc[row-1].apply(str) + ' ' + self.__raw_df__.loc[row].apply(str)
         if delimiters is not None:
             for column in delimiters:

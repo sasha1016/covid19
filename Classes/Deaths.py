@@ -5,6 +5,7 @@ import numpy as np
 from dateutil import parser
 from datetime import datetime
 import time
+import regex
 
 from Document import Document
 from Column import Columns 
@@ -61,6 +62,16 @@ class Deaths():
         df = df.explode(column)
         self.__raw_df__ = df
 
+    @Logger.log(name="Create deceased at column",df=True)
+    def __deceased_at__(self):
+        global regex  
+        dod,deceased_at = self.columns.get('DOD'), 'deceased at'
+        exp = r'((?:\d{1,2})\s*[-/.]\s*(?:\w{2,3}|\d{1,2})\s*[-/.]\s*(?:\d{2,4}))\s*(?:at)?\s*(designated{e<=3}|private{e<=3})?'
+        dods = [regex.match(exp,item)[1] if regex.match(exp,item) is not None else np.nan for item in self.__raw_df__[dod]]
+        dcd_ats = [regex.match(exp,item)[2] if regex.match(exp,item) is not None else '' for item in self.__raw_df__[dod]]
+        self.__raw_df__[dod] = dods 
+        self.__raw_df__[deceased_at] = dcd_ats
+
     @Logger.log(name='Clean Values and Strip strings')
     def __clean_values__(self,replace_pno=False):
         to_replace = {r'\n':'',r'&':','} if not replace_pno else {r'[pP]\s*-\s*':''}
@@ -79,12 +90,13 @@ class Deaths():
         self.__join__()
         self.__add_dead_on_arrival_column__()
         self.__format_doa__()
+        self.__deceased_at__()
         self.__convert_to_datetime__(col.DOA)
         self.__convert_to_datetime__(col.DOD)
         self.__add_duration__()
         table.checks(self)
 
-    @table.initialize(table=const.DEATHS)
+    @table.initialize(table=const.DEATHS,force=True)
     def __init__(self,doc):
 
         self.columns = Columns([col.SNO,col.PNO,col.DISTRICT,col.AGE,col.SOURCE,col.SYMPTMS,col.CMRBDTS,col.DOA,col.DOD])
@@ -98,13 +110,13 @@ def create_abs_path(rel_path):
     return (os.path.normpath(path_to_data + rel_path))
 
 def main():
-    file_name = '09-07-2020'
+    file_name = '15-08-2020'
     Logger.init(f'/data/logs/deaths/{file_name}')
     pdf_path = create_abs_path(f'/data/06-07/{file_name}.pdf')
     doc = Document(pdf_path,file_name)
     deaths = Deaths(doc)
     df = deaths.get()
-    print(df)
+    #print(df)
 
 if __name__ == "__main__":
     main()

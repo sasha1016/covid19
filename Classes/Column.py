@@ -159,10 +159,13 @@ class Columns():
         if column == 'DOA':
             df_column = self.columns[column]
             for (index,doa) in df[df_column].items():
+                corresponding_dod = df.at[index,self.columns['DOD']] 
                 matches = re.findall(regex,doa) 
                 if len(matches) == 2:
                     df.at[index,df_column] = matches[0]
                     df.at[index,self.columns['DOD']] = matches[1]
+                elif corresponding_dod == 'nan' or corresponding_dod == np.nan:
+                    df.at[index,self.columns['DOD']] = matches[0]
 
     def get(self,column = None):
         if isinstance(column,list):

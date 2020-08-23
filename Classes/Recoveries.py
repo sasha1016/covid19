@@ -14,6 +14,8 @@ from Column import Columns
 from Column import constants as col
 import constants as const
 
+pd.set_option("display.max_colwidth", 1000000000000000000000000000)
+
 
 pd.options.display.max_rows = 200
 
@@ -27,26 +29,20 @@ class Recoveries():
         thead_row, pnos_placement_errors = (None,None)
 
         def determine_thead(self):
-            # thead_row = None
-            # rows_to_search_in = self.__raw_df__.head(5)
-            # found = False
-            # for index,row in rows_to_search_in.iterrows():
-            #     for string in row.values:
-            #         if isinstance(string,str):
-            #             if regex.search(r'patient number{e<=3}',string,flags=re.I) is not None:
-            #                 thead_row = index
-            #                 found = True 
-            #                 break
-            #             else:
-            #                 pass
-            #                 #print(f'patient number wasn\'t found in {index} with {string}')
-            #     if found == True:
-            #         break
-            # return thead_row
-            patient_numbers_coords = [(x, self.__raw_df__.columns[y])\
-                for x, y in zip(*np.where(regex.findall(r'patient number{e<=3}',str(self.__raw_df__.values),re.I) != []))]
-            #print(patient_numbers_coords)
-            thead_row = patient_numbers_coords[0][0]
+            thead_row = None
+            rows_to_search_in = self.__raw_df__.head(5)
+            found = False
+            for index,row in rows_to_search_in.iterrows():
+                for string in row.values:
+                    if isinstance(string,str):
+                        if regex.search(r'patient number{e<=3}',string,flags=re.I) is not None:
+                            thead_row = index
+                            found = True 
+                            break
+                        else:
+                            pass
+                if found == True:
+                    break
             return thead_row
         
         def shift(self):
@@ -169,7 +165,8 @@ def main():
     doc = Document(pdf_path,file_name)
     rec = Recoveries(doc)
     df = rec.get()
-    df
+    #
+    # print(df)
 
 if __name__ == "__main__":
     main()

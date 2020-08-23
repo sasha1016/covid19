@@ -6,22 +6,23 @@ import Logger
 import functools
 import time 
 import constants as const
+from fuzzywuzzy import process
 
 
 IS = None 
-COLUMN_COUNTS = {'RECOVERIES':6,'DEATHS':12,'NEWCASES':9}
+COLUMN_COUNTS = {'RECOVERIES':6,'DEATHS':13,'NEWCASES':9}
 
 @Logger.log(name='Drop Unimportant Values')
 def drop_unimportant_values(self):
     self.__raw_df__.replace(['',np.nan,'nan'],np.nan,inplace=True)
-    self.__raw_df__.replace(regex = [r'\d{1,2}\.\d{1,2}\.\d{2,4}',r'\bAnnexure\b',r'\bToday\b'],value = np.nan,inplace=True)
+    self.__raw_df__.replace(regex = [r'(?:date[:-]?\s*)(?:\d{1,2})\s*[-/.]\s*(?:\w{2,3}|\d{1,2})\s*[-/.]\s*(?:\d{2,4})',r'\bAnnexure\b',r'\bToday\b',r'(?:[\d]*?page)?\s*\d{1,3}\s*(?:of)\s*(?:\d{1,3})$'],value = np.nan,inplace=True)
     self.__raw_df__.dropna(how='all',axis=1,inplace=True)
     self.__raw_df__.dropna(how='all',inplace=True)
     self.__raw_df__.reset_index(drop=True,inplace=True)
     
 @Logger.log(name='Clean Values')
 def clean_values(df,text_columns = None):
-    df.replace(regex=[r'\n',r'[pP]\s*-\s*',r'&'],value=['','',','],inplace=True)
+    df.replace(regex=[r'\n',r'[pP]\s*-\s*',r'&'],value=[' ','',','],inplace=True)
     df = df.apply(lambda x: x.astype(str).str.lower().str.strip())
 
 @Logger.log(name='Reset Columns',df=True)
@@ -76,8 +77,11 @@ def checks(self,*args):
         for row,district in districts.items():
             if district not in district_values:
                 if district.strip() not in district_values:
-                    no_row_join_error = False 
-                    print(f'Possible row join error in row {row}, {district}')
+                    district = district.strip()
+                    _,score = process.extractOne(district,district_values)
+                    if score < 50:
+                        no_row_join_error = False 
+                        print(f'Possible row join error in row {row}, {district}')
         if no_row_join_error:
             print(f'No Row Join Errors in DF')
 
@@ -92,6 +96,7 @@ def checks(self,*args):
 
 def initialize(table,**kwargs):
     table_name = const.DISPLAY_NAMES[table]
+    force = kwargs.get('force',True)
     def container(func):
         @functools.wraps(func)
         def wrapper(self,*args,**kwargs):
@@ -111,7 +116,7 @@ def initialize(table,**kwargs):
             print(f'\n\n{table_name} parsing started')
 
             start = time.perf_counter()
-            self.__raw_df__ = doc.get_tables(table,force=True)
+            self.__raw_df__ = doc.get_tables(table,force=force)
             Logger.message(f'Took {time.perf_counter() - start}s to load {table_name}')
 
             func(self,*args,**kwargs)

@@ -93,12 +93,23 @@ class Document:
         except (KeyError, FileNotFoundError):
             Logger.message(f'Got DF from PDF')
             lower,upper = self.__table_spans__[table_name.upper()]
+            columns_in_page = None
             for page_number in range(lower,upper + 1): 
                 table = camelot.read_pdf(self.__path__,pages=str(page_number))
+                df = table[0].df 
+                if columns_in_page is None:
+                    columns_in_page = df.shape[1] 
+                else:
+                    if columns_in_page != df.shape[1]:
+                        print(f'inserted a filler col {columns_in_page} already set and found {df.shape[1]} columns')
+                        columns = list(df.columns) 
+                        columns = [c + 1 for c in columns]
+                        df.columns = columns 
+                        df.insert(loc=0,column=0,value='')
                 if page_number == lower: 
-                    combined_df = table[0].df
+                    combined_df = df
                 else: 
-                    combined_df = pd.concat([combined_df,table[0].df],ignore_index=True)
+                    combined_df = pd.concat([combined_df,df],ignore_index=True)
             self.__raw_df__ = combined_df
             self.__save_df_to_hdf5__(table_name.upper())
         return combined_df
