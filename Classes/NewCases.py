@@ -18,7 +18,7 @@ class NewCases():
 
     __raw_df__ = None
         
-    @Logger.log(name='Split Source')
+    @Logger.log(name='Split Source',df=True)
     def __split_description__(self):
         source_col = self.columns.get(col.SOURCE)
         if source_col is not None:
@@ -34,7 +34,7 @@ class NewCases():
         if sex_col is not None:
             self.__raw_df__[sex_col].replace({r'^[Ff].*':'f',r'^[Mm].*':'m'},regex=True,inplace=True)
 
-    @Logger.log(name='Split Isolation Location')
+    @Logger.log(name='Split Isolation Location',df=True)
     def __split_isolation_location__(self):
         isoat_col = self.columns.get(col.ISOAT)
         if isoat_col is not None:
@@ -48,9 +48,10 @@ class NewCases():
     def __add_positive_result_date__(self):
         self.__raw_df__['+ve result date'] = self.date
 
-    @Logger.log(name='Remove Redundant Columns')
+    @Logger.log(name='Remove Redundant Columns',df=True)
     def __remove_redundant_cols__(self):
-        cols = self.columns.get([col.DPNO,col.SNO,col.ISOAT,col.SOURCE])
+        cols = list(self.columns.get([col.DPNO,col.SNO,col.ISOAT,col.SOURCE]))
+        #cols = [col for col in cols if col is not None]
         self.__raw_df__.drop(columns=cols,inplace=True,errors='ignore')
         self.__raw_df__.reset_index(drop=True,inplace=True)
 
@@ -90,7 +91,7 @@ def create_abs_path(rel_path):
     return (os.path.normpath(path_to_data + rel_path))
 
 def main():
-    file_name = '03-07-2020'
+    file_name = '27-06-2020'
     Logger.init(f'/data/logs/newcases/{file_name}')
     pdf_path = create_abs_path(f'/data/06-07/{file_name}.pdf')
     doc = Document(pdf_path,file_name)

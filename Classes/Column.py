@@ -35,9 +35,12 @@ def sno_test(values):
     numbers = [re.match(r'\d+',value).group(0) for value in values if re.match('\d+',value) is not None]
     numbers = sorted([int(number) for number in numbers])
     differences = np.diff(numbers,1).tolist()
-    if (differences.count(1) >= (len(differences) - 2)) and numbers[0] == 1:
-        return True 
-    else:
+    try:
+        if (differences.count(1) >= (len(differences) - 2)) and numbers[0] in (1,2,3,4):
+            return True 
+        else:
+            return False
+    except (IndexError):
         return False
 
 

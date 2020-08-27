@@ -13,9 +13,7 @@ import Table as table
 from Column import Columns 
 from Column import constants as col
 import constants as const
-
-pd.set_option("display.max_colwidth", 1000000000000000000000000000)
-
+from utils import print_success,print_error,csv_path
 
 pd.options.display.max_rows = 200
 
@@ -35,7 +33,7 @@ class Recoveries():
             for index,row in rows_to_search_in.iterrows():
                 for string in row.values:
                     if isinstance(string,str):
-                        if regex.search(r'patient number{e<=3}',string,flags=re.I) is not None:
+                        if regex.search(r'(patient\s*number){e<=3}',string,flags=re.I) is not None:
                             thead_row = index
                             found = True 
                             break
@@ -49,9 +47,9 @@ class Recoveries():
             global col
             max_col = list(self.__raw_df__.columns)[-1]
             min_col = self.columns.get(col.PNOS)
-            for col in range(max_col,min_col,-1):
-                self.__raw_df__[col-1] = self.__raw_df__[col-1].replace(to_replace=['nan',np.nan], value=['','']).str.cat(self.__raw_df__[col].replace(to_replace=['nan',np.nan], value=['','']))
-                self.__raw_df__[col] = np.nan
+            for column in range(max_col,min_col,-1):
+                self.__raw_df__[column-1] = self.__raw_df__[column-1].replace(to_replace=['nan',np.nan], value=['','']).str.cat(self.__raw_df__[column].replace(to_replace=['nan',np.nan], value=['','']))
+                self.__raw_df__[column] = np.nan
 
         def determine_errors(self,thead_row):
             pnos_col = self.columns.get(col.PNOS)
@@ -116,9 +114,9 @@ class Recoveries():
             for (index,check) in self.__raw_df__['check'].iteritems():
                 if check == 0:
                     all_counts_match = False 
-                    print(f'Patient Numbers Count failed for {index} row')
+                    print_error(f'Patient Numbers Count failed for {index} row')
             if all_counts_match:
-                print('All Patient Numbers Count match!')
+                print_success('All Patient Numbers Count match!')
 
         table.checks(self,pnos_count)
 
@@ -158,15 +156,13 @@ def create_abs_path(rel_path):
     return (os.path.normpath(path_to_data + rel_path))
 
 def main():
-    file_name = '15-08-2020'
+    file_name = '06-06-2020'
     Logger.init(f'/data/logs/recoveries/{file_name}')
     pdf_path = f'/data/06-07/{file_name}.pdf'
     pdf_path = create_abs_path(pdf_path)
     doc = Document(pdf_path,file_name)
     rec = Recoveries(doc)
-    df = rec.get()
-    #
-    # print(df)
+    rec.get().to_csv(csv_path('recoveries',file_name))
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,7 @@ import logging
 import logging.handlers
 import os 
 import time
+from utils import print_error
 
 filename = None
 error_log = None 
@@ -53,6 +54,10 @@ def message(msg):
     global info_log
     info_log.info(msg)
 
+def debug(msg):
+    global df_log 
+    df_log.debug(msg)
+
 def drop():
     global error_log, info_log, df_log, file_handlers
     error_log.removeHandler(file_handlers['ERROR'])
@@ -91,8 +96,8 @@ def log(name,**kwargs):
                 if log_df is True:
                     df_log.debug(f'Raw DF after {name} process\n{self.__raw_df__.to_string()}')
             except Exception:
-                message = f"Process {name}\n"
-                print(f'\nError in {message}')
+                message = f"Process {name}"
+                print_error(f'Error in {message}')
                 error_log.exception(message)
                 pass
         return wrapper 

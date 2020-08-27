@@ -7,6 +7,8 @@ import functools
 import time 
 import constants as const
 from fuzzywuzzy import process
+from utils import print_error,print_success,print_br
+
 
 
 IS = None 
@@ -48,26 +50,26 @@ def reset_columns(self,columns_determined=True):
     self.__raw_df__ = self.__raw_df__.reset_index(drop=True)
 
 def checks(self,*args):
-    print('Checking ...')
+
 
     def nans_and_nats():
-        df = self.__raw_df__.replace(to_replace={'nan':np.nan,'nat':pd.NaT})
+        df = self.__raw_df__.replace(to_replace={'nan':np.nan,'nat':pd.NaT}).dropna(how='all',axis=1)
         null_values_exist = False 
         for index,row in df.iterrows():
             null_values = row.isna()
             if True in null_values.values:
                 null_values_exist = True
-                print(f'{null_values.values.tolist().count(True)} null values in row {index}')
+                print_error(f'{null_values.values.tolist().count(True)} null values in row {index}')
 
         if not null_values_exist:
-            print('No null values in the DF')
+            print(f'{const.SUCCESS}No null values in the DF')
 
     def structure():
         cols = self.__raw_df__.shape[1]
         if cols != COLUMN_COUNTS[IS]:
-            print('Column count doesn\'t match')
+            print_error(f'Column count doesn\'t match')
         else:
-            print('Column count matches')
+            print_success(f'Column count matches')
 
     def row_join_error():
         district_col = self.columns.get('DISTRICT')
@@ -81,20 +83,28 @@ def checks(self,*args):
                     _,score = process.extractOne(district,district_values)
                     if score < 50:
                         no_row_join_error = False 
-                        print(f'Possible row join error in row {row}, {district}')
+                        print_error(f'Possible row join error in row {row}, {district}')
         if no_row_join_error:
-            print(f'No Row Join Errors in DF')
+            print_success(f'No Row Join Errors in DF')
+    try:
+        print('\nChecking ...')
 
-    nans_and_nats()
-    structure()
-    row_join_error()
+        nans_and_nats()
+        structure()
+        row_join_error()
 
-    for check in args:
-        check(self)
-    
-    print('Checks completed!')
+        for check in args:
+            check(self)
+
+        print('Checks completed!')
+    except:
+        print_error('There was an error while checking')
+        pass
 
 def initialize(table,**kwargs):
+
+
+
     table_name = const.DISPLAY_NAMES[table]
     force = kwargs.get('force',True)
     def container(func):
@@ -104,16 +114,19 @@ def initialize(table,**kwargs):
             nonlocal table_name,table
             doc = args[0]
 
+
             IS = table
             Logger.init(f'/data/logs/{IS.lower()}/{doc.filename}')
 
+            print_br('-')
+
             if not doc.exists(table):
-                message = f'\n{table_name} table doesn\'t exist or is not readable'
-                print(message)
+                message = f'\n{table_name} table doesn\'t exist or is not readable\n'
+                print_error(message)
                 Logger.message(message)
                 return None 
 
-            print(f'\n\n{table_name} parsing started')
+            print(f'\nParsing {table_name} ...\n')
 
             start = time.perf_counter()
             self.__raw_df__ = doc.get_tables(table,force=force)
@@ -126,8 +139,8 @@ def initialize(table,**kwargs):
             Logger.message(f'Took {time.perf_counter() - start}s to process {table_name}')
 
             Logger.drop()
-            print(f'{table_name} parsing completed')
-        
+            print(f'\nCompleted Parsing {table_name}\n')
+
         return wrapper
     return container    
 

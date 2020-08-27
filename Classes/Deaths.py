@@ -6,6 +6,7 @@ from dateutil import parser
 from datetime import datetime
 import time
 import regex
+from utils import csv_path
 
 from Document import Document
 from Column import Columns 
@@ -96,7 +97,7 @@ class Deaths():
         self.__add_duration__()
         table.checks(self)
 
-    @table.initialize(table=const.DEATHS,force=True)
+    @table.initialize(table=const.DEATHS)
     def __init__(self,doc):
 
         self.columns = Columns([col.SNO,col.PNO,col.DISTRICT,col.AGE,col.SOURCE,col.SYMPTMS,col.CMRBDTS,col.DOA,col.DOD])
@@ -110,12 +111,23 @@ def create_abs_path(rel_path):
     return (os.path.normpath(path_to_data + rel_path))
 
 def main():
-    file_name = '15-08-2020'
-    Logger.init(f'/data/logs/deaths/{file_name}')
-    pdf_path = create_abs_path(f'/data/06-07/{file_name}.pdf')
-    doc = Document(pdf_path,file_name)
-    deaths = Deaths(doc)
-    df = deaths.get()
+
+    path_to_pdfs = f'/data/06-07'
+    path_to_pdfs = create_abs_path(path_to_pdfs)
+    files = list(reversed(os.listdir(path_to_pdfs)))
+    #files = ['24-06-2020','23-06-2020','22-06-2020','21-06-2020','20-06-2020','19-06-2020']
+    for file_name in files:
+            try:
+                file_name = file_name.split('.')[0]
+                Logger.init(f'/data/logs/deaths/{file_name}')
+                pdf_path = create_abs_path(f'/data/06-07/{file_name}.pdf')
+                doc = Document(pdf_path,file_name)
+                deaths = Deaths(doc)
+                deaths.get().to_csv(csv_path('deaths',file_name))
+                Logger.drop()
+                del doc, deaths
+            except:
+                continue
     #print(df)
 
 if __name__ == "__main__":
